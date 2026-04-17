@@ -3,7 +3,7 @@ name: SPB CI/CD Pipeline
 on:
    push:
      branches:
-       - main
+       - Production
 env:
   AWS_REGION: ap-south-1
   ECR_REPO: 223700470790.dkr.ecr.ap-south-1.amazonaws.com/hello-world
@@ -35,27 +35,3 @@ jobs:
       - name: Push Docker Image to ECR
         run: |
           docker push $ECR_REPO:${{ env.VERSION }}
-
-      - name: Deploy to Remote Server
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ec2-13-202-232-102.ap-south-1.compute.amazonaws.com
-          username: ubuntu
-          key: ${{ secrets.EC2_PEM }}   # store the content of BCTQA.pem as a GitHub Secret
-          script: |
-            echo "Logging in to Amazon ECR..."
-            aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 223700470790.dkr.ecr.ap-south-1.amazonaws.com
-            echo "Stopping old container if exists..."
-            docker stop hello-world || true
-            docker rm hello-world || true
-            echo "Removing old images for frontend..."
-            docker images "223700470790.dkr.ecr.ap-south-1.amazonaws.com/hello-world" -q | xargs -r docker rmi -f || true
-            echo "Pulling latest image..."
-            docker pull 223700470790.dkr.ecr.ap-south-1.amazonaws.com/hello-world:${{ env.VERSION }}
-            echo "Starting new container..."
-            docker run -d \
-              --name hello-world \
-              -p 3030:80 \
-              223700470790.dkr.ecr.ap-south-1.amazonaws.com/hello-world:${{ env.VERSION }}
-
- 
